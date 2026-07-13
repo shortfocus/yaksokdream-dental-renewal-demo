@@ -93,6 +93,12 @@ export default function App() {
   // 일괄 As-Is: 실제 운영 중인 기존 사이트를 iframe으로 표시 (첫 진입 기본값)
   const [showLiveAsIs, setShowLiveAsIs] = useState(true);
   const LIVE_ASIS_URL = 'http://www.xn--vb0b92m88dwvj85ez2p.com/';
+  // HTTPS 페이지에서는 HTTP iframe이 Mixed Content로 차단됨 (로컬 http에서는 정상)
+  const canEmbedLiveAsIs =
+    typeof window !== 'undefined' &&
+    (LIVE_ASIS_URL.startsWith('https:') || window.location.protocol === 'http:');
+  const showLiveIframe = showLiveAsIs && canEmbedLiveAsIs;
+  const showLiveAsIsFallback = showLiveAsIs && !canEmbedLiveAsIs;
 
   // Refs for scroll target linking
   const sectionRefs = {
@@ -117,17 +123,17 @@ export default function App() {
 
   // To-Be 히어로: 기존 메인 배너 자동 슬라이드
   useEffect(() => {
-    if (asIsStates.banner || showLiveAsIs) return;
+    if (asIsStates.banner || showLiveIframe) return;
     setHeroSlideIndex((prev) => prev % HERO_SLIDES.length);
     const timer = setInterval(() => {
       setHeroSlideIndex((prev) => (prev + 1) % HERO_SLIDES.length);
     }, 4500);
     return () => clearInterval(timer);
-  }, [asIsStates.banner, showLiveAsIs]);
+  }, [asIsStates.banner, showLiveIframe]);
 
   // 스크롤 영역 높이 − 하단 플로팅 바 높이 = 히어로 높이
   useEffect(() => {
-    if (showLiveAsIs || asIsStates.banner) {
+    if (showLiveIframe || asIsStates.banner) {
       setHeroHeight(0);
       return;
     }
@@ -154,7 +160,7 @@ export default function App() {
       ro.disconnect();
       window.removeEventListener('resize', update);
     };
-  }, [showLiveAsIs, asIsStates.banner, asIsStates.form]);
+  }, [showLiveIframe, asIsStates.banner, asIsStates.form]);
 
   const goHeroSlide = (direction: -1 | 1) => {
     setHeroSlideIndex((prev) => (prev + direction + HERO_SLIDES.length) % HERO_SLIDES.length);
@@ -376,7 +382,7 @@ export default function App() {
           </div>
 
           {/* Web Viewport Screen */}
-          {showLiveAsIs ? (
+          {showLiveIframe ? (
             <div className="flex-1 relative flex flex-col bg-white overflow-hidden">
               <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600/95 text-white text-[11px] font-bold shadow-lg border border-red-400/40">
@@ -393,6 +399,23 @@ export default function App() {
             </div>
           ) : (
           <div className="flex-1 min-h-0 flex flex-col relative bg-slate-50 overflow-hidden">
+            {showLiveAsIsFallback && (
+              <div className="bg-amber-500 text-amber-950 px-4 py-2.5 text-xs font-semibold text-center flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 shrink-0 z-50">
+                <span className="inline-flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  HTTPS 배포 환경에서는 HTTP 기존 사이트를 iframe으로 표시할 수 없어 As-Is 시뮬레이션을 보여줍니다.
+                </span>
+                <a
+                  href={LIVE_ASIS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  실제 기존 사이트 새 탭으로 열기
+                </a>
+              </div>
+            )}
             {/* Visual warning banner if in As-Is security mode */}
             {asIsStates.security && (
               <div className="bg-red-500 text-white px-4 py-2 text-xs font-semibold text-center flex items-center justify-center gap-2 shrink-0 animate-pulse">
