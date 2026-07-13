@@ -122,7 +122,11 @@ export default function ProposalPanel({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div className="flex items-center gap-2 text-xs font-medium text-slate-400 px-2 pb-1">
           <Info className="w-3.5 h-3.5 text-teal-500" />
-          <span>각 항목을 클릭해 해당 영역으로 이동 및 상태 전환</span>
+          <span>
+            {showLiveAsIs
+              ? '각 항목의 기존 문제점을 확인해 보세요'
+              : '각 항목을 클릭해 해당 영역으로 이동 및 상태 전환'}
+          </span>
         </div>
 
         {PROPOSAL_ITEMS.map((item) => {
@@ -132,32 +136,39 @@ export default function ProposalPanel({
           return (
             <div
               key={item.id}
-              className={`p-4 rounded-xl border transition-all duration-300 relative cursor-pointer ${
+              className={`p-4 rounded-xl border transition-all duration-300 relative ${
+                showLiveAsIs ? 'cursor-default' : 'cursor-pointer'
+              } ${
                 isCurrentlyFocused
                   ? 'bg-slate-800 border-teal-500 shadow-md ring-1 ring-teal-500/30'
                   : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800/50 hover:border-slate-700'
               }`}
-              onClick={() => onFocusItem(item.id)}
+              onClick={() => {
+                if (showLiveAsIs) return;
+                onFocusItem(item.id);
+              }}
             >
               {/* Category & Status Indicator */}
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-800/80 px-2 py-0.5 rounded">
                   {item.category}
                 </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleItemState(item.id);
-                  }}
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all duration-200 cursor-pointer ${
-                    isAsIs
-                      ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
-                      : 'bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20'
-                  }`}
-                  title="해당 요소만 개별 상태 토글"
-                >
-                  {isAsIs ? '🚨 As-Is 적용' : '❇️ To-Be 적용'}
-                </button>
+                {!showLiveAsIs && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleItemState(item.id);
+                    }}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all duration-200 cursor-pointer ${
+                      isAsIs
+                        ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
+                        : 'bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20'
+                    }`}
+                    title="해당 요소만 개별 상태 토글"
+                  >
+                    {isAsIs ? '🚨 As-Is 적용' : '❇️ To-Be 적용'}
+                  </button>
+                )}
               </div>
 
               {/* Title & Icon */}
@@ -200,16 +211,18 @@ export default function ProposalPanel({
                 )}
               </div>
 
-              {/* Focus trigger helper */}
-              <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex justify-between items-center text-[10px] text-slate-400">
-                <span className="flex items-center gap-1 text-slate-500">
-                  <Eye className="w-3.5 h-3.5" />
-                  클릭시 이 위치로 이동
-                </span>
-                <span className="font-medium text-teal-400 flex items-center gap-0.5 hover:underline">
-                  자세히 보기 <ArrowRight className="w-3 h-3" />
-                </span>
-              </div>
+              {/* Focus trigger helper — To-Be에서만 표시 */}
+              {!showLiveAsIs && (
+                <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex justify-between items-center text-[10px] text-slate-400">
+                  <span className="flex items-center gap-1 text-slate-500">
+                    <Eye className="w-3.5 h-3.5" />
+                    클릭시 이 위치로 이동
+                  </span>
+                  <span className="font-medium text-teal-400 flex items-center gap-0.5 hover:underline">
+                    자세히 보기 <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              )}
             </div>
           );
         })}
