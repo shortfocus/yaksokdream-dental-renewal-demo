@@ -58,12 +58,13 @@ const INITIAL_FORM = {
 };
 export default function App() {
   // Global states for each proposal item's As-Is state (true = As-Is, false = To-Be)
+  // 첫 진입: 일괄 As-Is(기존 사이트)로 시작해 To-Be 전환을 유도
   const [asIsStates, setAsIsStates] = useState<Record<ProposalKey, boolean>>({
-    security: false, // Default to To-Be (Secure)
-    banner: false,   // Default to To-Be (Redesigned)
-    floating: false, // Default to To-Be (FAB with blur)
-    hours: false,    // Default to To-Be (Infographics)
-    form: false,     // Default to To-Be (Branded & High Contrast)
+    security: true,
+    banner: true,
+    floating: true,
+    hours: true,
+    form: true,
   });
 
   const [activeProposalItem, setActiveProposalItem] = useState<ProposalKey | null>(null);
@@ -89,8 +90,8 @@ export default function App() {
   // Address bar URL state
   const [isAddressBarLoading, setIsAddressBarLoading] = useState(false);
 
-  // 일괄 As-Is: 실제 운영 중인 기존 사이트를 iframe으로 표시
-  const [showLiveAsIs, setShowLiveAsIs] = useState(false);
+  // 일괄 As-Is: 실제 운영 중인 기존 사이트를 iframe으로 표시 (첫 진입 기본값)
+  const [showLiveAsIs, setShowLiveAsIs] = useState(true);
   const LIVE_ASIS_URL = 'http://www.xn--vb0b92m88dwvj85ez2p.com/';
 
   // Refs for scroll target linking
@@ -282,7 +283,9 @@ export default function App() {
               className={`px-2 py-1 text-[10px] font-bold rounded ${
                 Object.values(asIsStates).every(v => v === false) && !showLiveAsIs
                   ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' 
-                  : 'bg-slate-800 text-slate-400'
+                  : showLiveAsIs
+                    ? 'bg-teal-500/25 text-teal-300 border border-teal-400/50 animate-pulse'
+                    : 'bg-slate-800 text-slate-400'
               }`}
             >
               To-Be

@@ -89,18 +89,26 @@ export default function ProposalPanel({
           </button>
           <button
             onClick={() => setAllToMode(false)}
-            className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all duration-200 border cursor-pointer ${
-              isAllToBe
+            className={`relative py-2 px-3 text-xs font-semibold rounded-lg transition-all duration-200 border cursor-pointer ${
+              isAllToBe && !showLiveAsIs
                 ? 'bg-teal-500/20 text-teal-400 border-teal-500/30 shadow-inner'
-                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-750 hover:text-slate-300'
+                : showLiveAsIs
+                  ? 'bg-teal-500/25 text-teal-300 border-teal-400/60 shadow-[0_0_0_2px_rgba(45,212,191,0.35)] ring-2 ring-teal-400/50 animate-pulse'
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-750 hover:text-slate-300'
             }`}
           >
             ✨ 일괄 To-Be (개선)
+            {showLiveAsIs && (
+              <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full bg-teal-400 text-slate-950 text-[9px] font-bold leading-none shadow">
+                클릭
+              </span>
+            )}
           </button>
         </div>
         {showLiveAsIs && (
           <p className="mt-2 text-[10px] text-red-400/90 leading-relaxed">
-            미리보기에 실제 운영 중인 기존 사이트가 표시됩니다.
+            미리보기에 실제 운영 중인 기존 사이트가 표시됩니다.{' '}
+            <span className="text-teal-400 font-semibold">우측 To-Be를 눌러 개선안을 확인해 보세요.</span>
           </p>
         )}
       </div>
