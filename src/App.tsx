@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 
 import ProposalPanel from './components/ProposalPanel';
+import AsIsWireframe from './components/AsIsWireframe';
 import { ProposalKey, Consultation, Doctor } from './types';
 import {
   CLINIC_REVIEWS,
@@ -98,7 +99,6 @@ export default function App() {
     typeof window !== 'undefined' &&
     (LIVE_ASIS_URL.startsWith('https:') || window.location.protocol === 'http:');
   const showLiveIframe = showLiveAsIs && canEmbedLiveAsIs;
-  const showLiveAsIsFallback = showLiveAsIs && !canEmbedLiveAsIs;
 
   // Refs for scroll target linking
   const sectionRefs = {
@@ -397,25 +397,14 @@ export default function App() {
                 referrerPolicy="no-referrer"
               />
             </div>
+          ) : showLiveAsIs ? (
+            <AsIsWireframe
+              liveSiteUrl={LIVE_ASIS_URL}
+              onFocusItem={(id) => setActiveProposalItem(id)}
+              onGoToBe={() => setAllToMode(false)}
+            />
           ) : (
           <div className="flex-1 min-h-0 flex flex-col relative bg-slate-50 overflow-hidden">
-            {showLiveAsIsFallback && (
-              <div className="bg-amber-500 text-amber-950 px-4 py-2.5 text-xs font-semibold text-center flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 shrink-0 z-50">
-                <span className="inline-flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
-                  HTTPS 배포 환경에서는 HTTP 기존 사이트를 iframe으로 표시할 수 없어 As-Is 시뮬레이션을 보여줍니다.
-                </span>
-                <a
-                  href={LIVE_ASIS_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-900 text-white hover:bg-slate-800 transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  실제 기존 사이트 새 탭으로 열기
-                </a>
-              </div>
-            )}
             {/* Visual warning banner if in As-Is security mode */}
             {asIsStates.security && (
               <div className="bg-red-500 text-white px-4 py-2 text-xs font-semibold text-center flex items-center justify-center gap-2 shrink-0 animate-pulse">

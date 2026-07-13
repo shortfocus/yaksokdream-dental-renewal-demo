@@ -107,8 +107,8 @@ export default function ProposalPanel({
         </div>
         {showLiveAsIs && (
           <p className="mt-2 text-[10px] text-red-400/90 leading-relaxed">
-            미리보기에 기존 사이트(As-Is)가 표시됩니다. HTTPS 배포에서는 브라우저 보안상 iframe 대신 시뮬레이션 + 새 탭 링크가 제공됩니다.{' '}
-            <span className="text-teal-400 font-semibold">우측 To-Be를 눌러 개선안을 확인해 보세요.</span>
+            미리보기에 기존 문제점 와이어프레임이 표시됩니다. 실제 사이트는 새 탭으로 확인할 수 있습니다.{' '}
+            <span className="text-teal-400 font-semibold">To-Be를 눌러 개선안을 확인해 보세요.</span>
           </p>
         )}
       </div>
