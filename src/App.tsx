@@ -88,7 +88,9 @@ export default function App() {
   const [selfLigationStep, setSelfLigationStep] = useState<'closed' | 'open' | 'reclosed'>('closed');
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
   const [heroHeight, setHeroHeight] = useState(0);
-  const [floatBarHeight, setFloatBarHeight] = useState(112);
+  const [floatBarHeight, setFloatBarHeight] = useState(56);
+  const [floatBarOpen, setFloatBarOpen] = useState(false);
+  const [showSideFab, setShowSideFab] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const floatBarRef = useRef<HTMLDivElement>(null);
 
@@ -132,6 +134,35 @@ export default function App() {
     return () => clearInterval(timer);
   }, [asIsStates.banner, showLiveIframe]);
 
+  // 데스크톱에서는 플로팅 바 기본 펼침, 모바일은 접힘
+  useEffect(() => {
+    if (showLiveAsIs) return;
+    const mq = window.matchMedia('(min-width: 768px)');
+    const sync = () => setFloatBarOpen(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, [showLiveAsIs]);
+
+  // 히어로를 지나 스크롤하면 우측 FAB 표시
+  useEffect(() => {
+    if (showLiveAsIs || asIsStates.floating || asIsStates.banner) {
+      setShowSideFab(false);
+      return;
+    }
+    const scrollEl = scrollRef.current;
+    const bannerEl = sectionRefs.banner.current;
+    if (!scrollEl || !bannerEl) return;
+
+    const onScroll = () => {
+      const threshold = Math.max(bannerEl.offsetHeight * 0.55, 180);
+      setShowSideFab(scrollEl.scrollTop > threshold);
+    };
+    onScroll();
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    return () => scrollEl.removeEventListener('scroll', onScroll);
+  }, [showLiveAsIs, asIsStates.floating, asIsStates.banner]);
+
   // 스크롤 영역 높이 − 하단 플로팅 바 높이 = 히어로 높이
   useEffect(() => {
     if (showLiveIframe || asIsStates.banner) {
@@ -142,9 +173,9 @@ export default function App() {
     const update = () => {
       const scrollEl = scrollRef.current;
       if (!scrollEl) return;
-      const barH = floatBarRef.current?.offsetHeight || 112;
+      const barH = floatBarRef.current?.offsetHeight || (floatBarOpen ? 140 : 56);
       setFloatBarHeight(barH);
-      setHeroHeight(Math.max(Math.floor(scrollEl.clientHeight - barH), 280));
+      setHeroHeight(Math.max(Math.floor(scrollEl.clientHeight - barH), 220));
     };
 
     const ro = new ResizeObserver(update);
@@ -161,7 +192,7 @@ export default function App() {
       ro.disconnect();
       window.removeEventListener('resize', update);
     };
-  }, [showLiveIframe, asIsStates.banner, asIsStates.form]);
+  }, [showLiveIframe, asIsStates.banner, asIsStates.form, floatBarOpen, showLiveAsIs]);
 
   const goHeroSlide = (direction: -1 | 1) => {
     setHeroSlideIndex((prev) => (prev + direction + HERO_SLIDES.length) % HERO_SLIDES.length);
@@ -198,6 +229,7 @@ export default function App() {
     setShowLiveAsIs(false);
     setActiveProposalItem(id);
     setHighlightItem(id);
+    if (id === 'form') setFloatBarOpen(true);
 
     // Scroll to the ref target (iframe 해제 후 DOM이 생기므로 약간 지연)
     requestAnimationFrame(() => {
@@ -352,7 +384,7 @@ export default function App() {
           <div className="shrink-0 z-50 px-3 py-2.5 bg-teal-950 border-b border-teal-500/30 flex items-start sm:items-center gap-2.5">
             <Info className="w-4 h-4 text-teal-300 shrink-0 mt-0.5 sm:mt-0" />
             <p className="flex-1 text-[11px] sm:text-xs text-teal-100 leading-relaxed font-medium">
-              현재는 데모 페이지이며 디자인 및 내용 수정은 더 자세하게 작업합니다.
+              PC로 보실 것을 권장드립니다. 현재는 데모 페이지이며 디자인 및 내용 수정은 더 자세하게 작업합니다.
             </p>
             <button
               type="button"
@@ -473,40 +505,41 @@ export default function App() {
           <div className="flex-1 min-h-0 flex flex-col relative bg-slate-50 overflow-hidden">
             {/* Visual warning banner if in As-Is security mode */}
             {asIsStates.security && (
-              <div className="bg-red-500 text-white px-4 py-2 text-xs font-semibold text-center flex items-center justify-center gap-2 shrink-0 animate-pulse">
-                <AlertTriangle className="w-4 h-4 text-white" />
-                <span>이 웹사이트는 보안 연결(SSL)이 구성되지 않아 환자분의 소중한 개인정보(이름, 연락처 등)가 암호화되지 않고 노출될 위험이 있습니다.</span>
+              <div className="bg-red-500 text-white px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-semibold text-center flex items-start sm:items-center justify-center gap-2 shrink-0">
+                <AlertTriangle className="w-4 h-4 text-white shrink-0 mt-0.5 sm:mt-0" />
+                <span className="break-keep text-left sm:text-center leading-snug">이 웹사이트는 보안 연결(SSL)이 구성되지 않아 환자분의 소중한 개인정보(이름, 연락처 등)가 암호화되지 않고 노출될 위험이 있습니다.</span>
               </div>
             )}
 
             {/* Site header — outside scroll so hero can fill remaining viewport */}
-            <header className="bg-white border-b border-slate-100 py-4 px-6 md:px-12 flex justify-between items-center shrink-0 z-40 shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#007680] flex items-center justify-center text-white font-bold">
+            <header className="bg-white border-b border-slate-100 py-3 sm:py-4 px-3 sm:px-6 md:px-12 flex justify-between items-center gap-2 shrink-0 z-40 shadow-sm min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-[#007680] flex items-center justify-center text-white font-bold shrink-0">
                   약
                 </div>
-                <div>
-                  <h1 className="text-lg font-bold text-slate-800 leading-tight tracking-tight">
+                <div className="min-w-0">
+                  <h1 className="text-base sm:text-lg font-bold text-slate-800 leading-tight tracking-tight truncate">
                     약속드림치과
                   </h1>
-                  <span className="text-[9px] text-slate-500 font-semibold block -mt-0.5 tracking-widest uppercase">
+                  <span className="text-[9px] text-slate-500 font-semibold hidden sm:block -mt-0.5 tracking-widest uppercase">
                     PROMISE DREAM DENTAL
                   </span>
                 </div>
               </div>
 
-              <div ref={sectionRefs.security} className={`transition-all duration-300 p-1.5 rounded-lg ${
+              <div ref={sectionRefs.security} className={`transition-all duration-300 p-1 sm:p-1.5 rounded-lg shrink-0 max-w-[55%] sm:max-w-none ${
                 highlightItem === 'security' ? 'ring-4 ring-yellow-400 bg-yellow-100/50' : ''
               }`}>
                 {asIsStates.security ? (
-                  <div className="flex items-center gap-1.5 text-xs text-red-600 font-bold bg-red-50 px-2.5 py-1 rounded-full border border-red-200">
-                    <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
-                    <span>보안 비인증 (HTTP)</span>
+                  <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-red-600 font-bold bg-red-50 px-2 sm:px-2.5 py-1 rounded-full border border-red-200">
+                    <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                    <span className="truncate">보안 비인증</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 animate-pulse-slow" />
-                    <span>보안 암호화 전송 (HTTPS 적용 완료)</span>
+                  <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-emerald-700 font-bold bg-emerald-50 px-2 sm:px-2.5 py-1 rounded-full border border-emerald-200">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 animate-pulse-slow shrink-0" />
+                    <span className="sm:hidden truncate">HTTPS 적용</span>
+                    <span className="hidden sm:inline">보안 암호화 전송 (HTTPS 적용 완료)</span>
                   </div>
                 )}
               </div>
@@ -514,12 +547,12 @@ export default function App() {
 
             <div
               ref={scrollRef}
-              className="flex-1 min-h-0 overflow-y-auto relative"
+              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative break-keep"
             >
             {/* 2. Main Hero Visual Section */}
             <section 
               ref={sectionRefs.banner}
-              className={`relative w-full transition-all duration-300 ${
+              className={`relative w-full transition-all duration-300 overflow-hidden ${
                 highlightItem === 'banner' ? 'ring-4 ring-yellow-400 bg-yellow-100/20 z-10' : ''
               }`}
               style={
@@ -580,57 +613,58 @@ export default function App() {
                     <div className="absolute inset-0 bg-white/35 pointer-events-none" />
                   </div>
 
-                  {/* Prev / Next */}
+                  {/* Prev / Next — 모바일에서는 상시 노출(호버 없음) */}
                   <button
                     type="button"
                     onClick={() => goHeroSlide(-1)}
-                    className="absolute left-3 md:left-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/90 hover:bg-white text-slate-800 border border-slate-200/80 flex items-center justify-center opacity-0 group-hover/hero:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                    className="absolute left-2 sm:left-3 md:left-5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full bg-white/90 hover:bg-white text-slate-800 border border-slate-200/80 flex items-center justify-center opacity-70 sm:opacity-0 group-hover/hero:opacity-100 transition-opacity cursor-pointer shadow-sm"
                     aria-label="이전 배너"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => goHeroSlide(1)}
-                    className="absolute right-3 md:right-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/90 hover:bg-white text-slate-800 border border-slate-200/80 flex items-center justify-center opacity-0 group-hover/hero:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                    className="absolute right-2 sm:right-3 md:right-5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full bg-white/90 hover:bg-white text-slate-800 border border-slate-200/80 flex items-center justify-center opacity-70 sm:opacity-0 group-hover/hero:opacity-100 transition-opacity cursor-pointer shadow-sm"
                     aria-label="다음 배너"
                   >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
 
-                  {/* To-Be copy — 좌/우 가로 배치 */}
-                  <div className="absolute inset-0 z-10 flex items-center px-6 md:px-12 lg:px-16">
-                    <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+                  {/* To-Be copy — 모바일 정중앙 / 데스크톱 좌우 배치 */}
+                  <div className="absolute inset-0 z-10 flex items-center justify-center px-3 sm:px-6 md:px-12 lg:px-16 py-8 overflow-hidden">
+                    <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-8 md:gap-12 items-center justify-items-center md:justify-items-stretch min-w-0">
                       {/* Left */}
-                      <div className="space-y-5 text-left">
-                        <div className="inline-flex items-center gap-1.5 bg-[#007680]/10 text-[#007680] text-xs md:text-sm px-3 py-1.5 rounded-full border border-[#007680]/20 font-semibold">
-                          <Sparkles className="w-4 h-4 text-[#007680] animate-bounce-subtle" />
-                          <span>기존 메인 비주얼 슬라이드 · 2026 지표 반영</span>
+                      <div className="space-y-1.5 sm:space-y-4 md:space-y-5 text-center md:text-left min-w-0 flex flex-col items-center md:items-start">
+                        <div className="inline-flex max-w-full items-center gap-1 sm:gap-1.5 bg-[#007680]/10 text-[#007680] text-[10px] sm:text-xs md:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-[#007680]/20 font-semibold">
+                          <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[#007680] animate-bounce-subtle shrink-0" />
+                          <span className="truncate sm:hidden">2026 지표 반영</span>
+                          <span className="hidden sm:inline">기존 메인 비주얼 슬라이드 · 2026 지표 반영</span>
                         </div>
-                        <h2 className="text-3xl md:text-5xl font-sans font-bold leading-snug tracking-tight text-slate-900">
+                        <h2 className="text-[1.15rem] leading-snug sm:text-3xl md:text-5xl font-sans font-bold sm:leading-snug tracking-tight text-slate-900 break-keep">
                           약속드림의 <span className="text-[#007680]">확실한 실력</span>,
                           <br />
                           환자분의 평생을 향한 약속
                         </h2>
-                        <p className="text-sm md:text-base text-slate-700 leading-relaxed font-normal max-w-lg">
+                        <p className="hidden sm:block text-[11px] sm:text-sm md:text-base text-slate-700 leading-relaxed font-normal max-w-lg md:text-left text-center">
                           기존 사이트 메인 배너를 슬라이드로 재구성하고, 누적 임플란트 35,000건 돌파 지표를 최신으로 강조합니다.
                         </p>
                       </div>
 
                       {/* Right */}
-                      <div className="flex md:justify-end">
-                        <div className="bg-slate-900/10 border border-slate-900/10 rounded-xl px-7 py-6 text-slate-900 text-left w-full max-w-xs backdrop-blur-[2px]">
-                          <p className="text-xs text-[#007680] font-semibold tracking-wider uppercase">Clinical</p>
-                          <p className="text-4xl md:text-5xl font-sans font-extrabold tracking-tight mt-1 text-slate-900">
-                            35,000<span className="text-lg font-sans font-medium text-slate-500">건+</span>
+                      <div className="flex justify-center md:justify-end min-w-0 w-full">
+                        <div className="bg-slate-900/10 border border-slate-900/10 rounded-lg sm:rounded-xl px-3 py-2 sm:px-7 sm:py-6 text-slate-900 text-center md:text-left w-auto sm:w-full max-w-full sm:max-w-xs backdrop-blur-[2px]">
+                          <p className="text-[10px] sm:text-xs text-[#007680] font-semibold tracking-wider uppercase">Clinical</p>
+                          <p className="text-xl sm:text-4xl md:text-5xl font-sans font-extrabold tracking-tight mt-0.5 sm:mt-1 text-slate-900 tabular-nums">
+                            35,000<span className="text-xs sm:text-lg font-sans font-medium text-slate-500">건+</span>
                           </p>
-                          <p className="text-sm text-slate-600 mt-1.5">누적 임플란트 식립</p>
+                          <p className="text-[10px] sm:text-sm text-slate-600 mt-0.5 sm:mt-1.5">누적 임플란트 식립</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Dots */}
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5" role="tablist" aria-label="히어로 슬라이드">
+                    <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5" role="tablist" aria-label="히어로 슬라이드">
                       {HERO_SLIDES.map((slide, idx) => (
                         <button
                           key={slide.id}
@@ -672,15 +706,15 @@ export default function App() {
             </div>
 
             {/* 4. Core Dental Clinic Strengths / Trust indicators */}
-            <section className="py-14 px-6 md:px-12 bg-white shrink-0">
-              <div className="max-w-4xl mx-auto space-y-10">
+            <section className="py-10 sm:py-14 px-4 sm:px-6 md:px-12 bg-white shrink-0">
+              <div className="max-w-4xl mx-auto space-y-8 sm:space-y-10 min-w-0">
                 
                 {/* Section Header */}
-                <div className="text-center space-y-2">
-                  <span className="text-[#007680] text-xs font-bold tracking-widest block uppercase">
+                <div className="text-center space-y-2 px-1">
+                  <span className="text-[#007680] text-[10px] sm:text-xs font-bold tracking-widest block uppercase">
                     PROMISE & TRUST
                   </span>
-                  <h3 className="text-2xl font-serif font-bold text-slate-800">
+                  <h3 className="text-xl sm:text-2xl font-serif font-bold text-slate-800 break-keep">
                     많은 분들이 약속드림치과를 고집하는 이유
                   </h3>
                   <div className="w-12 h-1 bg-[#007680] mx-auto rounded mt-3" />
@@ -731,14 +765,14 @@ export default function App() {
             </section>
 
             {/* [NEW] Clinic Special Promotion Section */}
-            <section className="py-14 px-6 md:px-12 bg-slate-50 border-t border-slate-100 shrink-0">
-              <div className="max-w-4xl mx-auto space-y-8">
+            <section className="py-10 sm:py-14 px-4 sm:px-6 md:px-12 bg-slate-50 border-t border-slate-100 shrink-0">
+              <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 min-w-0">
                 {/* Section Header */}
-                <div className="text-center space-y-2">
-                  <span className="text-[#007680] text-xs font-bold tracking-widest block uppercase">
+                <div className="text-center space-y-2 px-1">
+                  <span className="text-[#007680] text-[10px] sm:text-xs font-bold tracking-widest block uppercase">
                     SPECIAL BENEFIT
                   </span>
-                  <h3 className="text-2xl font-serif font-bold text-slate-800">
+                  <h3 className="text-xl sm:text-2xl font-serif font-bold text-slate-800 break-keep">
                     약속드림치과 특별 프로모션
                   </h3>
                   <p className="text-xs text-slate-500 max-w-md mx-auto">
@@ -867,21 +901,22 @@ export default function App() {
                 </div>
 
                 {/* 1. Sleep Implant Container */}
-                <div className="bg-slate-900 text-white rounded-3xl p-6 md:p-10 shadow-xl overflow-hidden relative grid md:grid-cols-5 gap-8 items-center">
+                <div className="bg-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-10 shadow-xl overflow-hidden relative grid md:grid-cols-5 gap-5 sm:gap-8 items-center min-w-0">
                   <div className="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-[#007680]/15 filter blur-3xl pointer-events-none" />
                   
-                  <div className="md:col-span-3 space-y-5">
-                    <div className="inline-flex items-center gap-1 bg-teal-500/10 text-teal-300 text-xs px-3 py-1 rounded-full border border-teal-500/20 font-bold">
-                      <Moon className="w-3.5 h-3.5 text-teal-400 animate-pulse" />
-                      <span>의식하진정법 (가수면 마취 치과치료)</span>
+                  <div className="md:col-span-3 space-y-3 sm:space-y-5 min-w-0">
+                    <div className="inline-flex max-w-full items-center gap-1 bg-teal-500/10 text-teal-300 text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full border border-teal-500/20 font-bold">
+                      <Moon className="w-3.5 h-3.5 text-teal-400 animate-pulse shrink-0" />
+                      <span className="truncate">의식하진정법 (가수면 마취 치과치료)</span>
                     </div>
                     
-                    <h4 className="text-xl md:text-2xl font-serif font-bold text-white leading-snug">
+                    <h4 className="text-lg sm:text-xl md:text-2xl font-serif font-bold text-white leading-snug break-keep">
                       자고 일어난 듯 <span className="text-brand-secondary">편안한 수면임플란트</span>
                     </h4>
                     
-                    <p className="text-xs md:text-sm text-slate-300 leading-relaxed font-light">
-                      치과 치료 시 발생하는 극심한 공포증, 구역 반사, 마취 주사 통증으로 망설이셨나요? <br />
+                    <p className="text-xs md:text-sm text-slate-300 leading-relaxed font-light break-keep">
+                      치과 치료 시 발생하는 극심한 공포증, 구역 반사, 마취 주사 통증으로 망설이셨나요?{' '}
+                      <span className="hidden sm:inline"><br /></span>
                       의식하진정법은 전신마취와 달리 <strong>스스로 자발적 호흡을 정상 유지하는 안전한 가수면 상태</strong>에서 치료를 진행하므로, 통증 기억 없이 편안하게 누워 자고 일어난 듯 완성도 높은 수술을 받으실 수 있습니다.
                     </p>
 
@@ -1396,18 +1431,18 @@ export default function App() {
             {/* 5. Information Section: Hours and Location */}
             <section 
               ref={sectionRefs.hours}
-              className={`py-12 px-6 md:px-12 bg-slate-50 border-t border-slate-100 transition-all duration-300 shrink-0 ${
+              className={`py-10 sm:py-12 px-4 sm:px-6 md:px-12 bg-slate-50 border-t border-slate-100 transition-all duration-300 shrink-0 ${
                 highlightItem === 'hours' ? 'ring-4 ring-yellow-400 bg-yellow-100/20' : ''
               }`}
             >
-              <div className="max-w-4xl mx-auto">
-                <div className="mb-8 flex items-center justify-between">
-                  <div>
-                    <span className="text-[#007680] text-xs font-bold uppercase tracking-wider">VISITING GUIDE</span>
-                    <h3 className="text-2xl font-serif font-bold text-slate-800">진료 안내 및 찾아오시는 길</h3>
+              <div className="max-w-4xl mx-auto min-w-0">
+                <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="text-[#007680] text-[10px] sm:text-xs font-bold uppercase tracking-wider">VISITING GUIDE</span>
+                    <h3 className="text-xl sm:text-2xl font-serif font-bold text-slate-800 break-keep">진료 안내 및 찾아오시는 길</h3>
                   </div>
                   {asIsStates.hours && (
-                    <span className="text-[10px] text-red-500 font-mono bg-red-50 px-2 py-1 rounded border border-red-200">
+                    <span className="text-[10px] text-red-500 font-mono bg-red-50 px-2 py-1 rounded border border-red-200 shrink-0">
                       [As-Is: 해독이 불가능한 텍스트 나열 형태]
                     </span>
                   )}
@@ -1428,39 +1463,39 @@ export default function App() {
                   <div className="grid md:grid-cols-2 gap-6">
                     
                     {/* Grid Card 1: Clinic Hours Table */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4 min-w-0">
                       <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                        <div className="p-1.5 bg-teal-50 rounded-lg text-[#007680]">
+                        <div className="p-1.5 bg-teal-50 rounded-lg text-[#007680] shrink-0">
                           <Clock className="w-5 h-5" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <h4 className="font-bold text-slate-800 text-sm">진료시간 안내</h4>
                           <p className="text-[10px] text-slate-400">월요일 · 수요일 야간 진료 시행</p>
                         </div>
                       </div>
 
-                      <div className="space-y-2 text-xs">
+                      <div className="space-y-2 text-xs min-w-0">
                         {/* Weekly Table */}
-                        <div className="flex justify-between items-center py-1">
-                          <span className="text-slate-500">평일 (화·목·금)</span>
-                          <span className="font-semibold text-slate-800">09:30 ~ 18:30</span>
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 py-1">
+                          <span className="text-slate-500 shrink-0">평일 (화·목·금)</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">09:30 ~ 18:30</span>
                         </div>
-                        <div className="flex justify-between items-center py-1.5 px-2 bg-teal-50 rounded-lg border border-teal-100/50">
-                          <span className="text-[#007680] font-bold flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
-                            월요일 · 수요일 (야간진료)
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 py-1.5 px-2 bg-teal-50 rounded-lg border border-teal-100/50 min-w-0">
+                          <span className="text-[#007680] font-bold flex items-center gap-1 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse shrink-0"></span>
+                            <span className="break-keep">월요일 · 수요일 (야간진료)</span>
                           </span>
-                          <span className="font-bold text-[#007680]">09:30 ~ 20:30</span>
+                          <span className="font-bold text-[#007680] tabular-nums shrink-0 sm:pl-2">09:30 ~ 20:30</span>
                         </div>
-                        <div className="flex justify-between items-center py-1">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 py-1">
                           <span className="text-slate-500">토요일 (점심시간 없음)</span>
-                          <span className="font-semibold text-slate-800">09:30 ~ 13:30</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">09:30 ~ 13:30</span>
                         </div>
-                        <div className="flex justify-between items-center py-1 text-slate-400">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 py-1 text-slate-400">
                           <span>평일 점심 시간</span>
-                          <span>12:30 ~ 14:00</span>
+                          <span className="tabular-nums">12:30 ~ 14:00</span>
                         </div>
-                        <div className="flex justify-between items-center py-1.5 border-t border-slate-100 text-xs">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 py-1.5 border-t border-slate-100 text-xs">
                           <span className="text-red-500 font-medium">일요일 · 공휴일</span>
                           <span className="text-red-500 font-bold">휴진</span>
                         </div>
@@ -1473,45 +1508,45 @@ export default function App() {
                     </div>
 
                     {/* Grid Card 2: Transport & Parking Cards */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4 flex flex-col justify-between">
+                    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4 flex flex-col justify-between min-w-0">
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                          <div className="p-1.5 bg-teal-50 rounded-lg text-[#007680]">
+                          <div className="p-1.5 bg-teal-50 rounded-lg text-[#007680] shrink-0">
                             <MapPin className="w-5 h-5" />
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <h4 className="font-bold text-slate-800 text-sm">오시는 길</h4>
-                            <p className="text-[10px] text-slate-400">안양중앙시장 1번 입구 바로 옆 2층</p>
+                            <p className="text-[10px] text-slate-400 break-keep">안양중앙시장 1번 입구 바로 옆 2층</p>
                           </div>
                         </div>
 
                         {/* Location Details */}
-                        <div className="space-y-3">
+                        <div className="space-y-3 min-w-0">
                           <div className="space-y-1">
                             <span className="text-[10px] text-slate-400 block">도로명 주소</span>
-                            <p className="text-xs text-slate-700 font-semibold leading-relaxed">
+                            <p className="text-xs text-slate-700 font-semibold leading-relaxed break-keep">
                               14001 경기도 안양시 만안구 안양로 293 (안양동) 2층
                             </p>
                           </div>
 
                           {/* Transit Cards */}
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1 min-w-0">
                               <span className="font-bold text-slate-800 flex items-center gap-1">
-                                <Train className="w-3.5 h-3.5 text-blue-600" />
+                                <Train className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                                 지하철 이용시
                               </span>
-                              <p className="text-[11px] text-slate-600 leading-relaxed">
+                              <p className="text-[11px] text-slate-600 leading-relaxed break-keep">
                                 <strong>1호선 안양역</strong> 1번 출구 도보 약 10분 (중앙시장 방면 직진, 1번 입구 옆 2층)
                               </p>
                             </div>
 
-                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1 min-w-0">
                               <span className="font-bold text-slate-800 flex items-center gap-1">
-                                <Bus className="w-3.5 h-3.5 text-green-600" />
+                                <Bus className="w-3.5 h-3.5 text-green-600 shrink-0" />
                                 버스 이용시
                               </span>
-                              <p className="text-[11px] text-slate-600 leading-relaxed">
+                              <p className="text-[11px] text-slate-600 leading-relaxed break-keep">
                                 <strong>안양중앙시장.안양일번가</strong> 정류장 하차 후 도보 2분<br />
                                 일반 버스: 1, 2, 3, 5, 6, 8, 9, 88번 등 다수 노선
                               </p>
@@ -1521,16 +1556,16 @@ export default function App() {
                       </div>
 
                       {/* Expandable Parking Widget (Marketing Detail) */}
-                      <div className="border border-slate-100 rounded-xl overflow-hidden mt-2">
+                      <div className="border border-slate-100 rounded-xl overflow-hidden mt-2 min-w-0">
                         <button
                           onClick={() => setIsParkingExpanded(!isParkingExpanded)}
-                          className="w-full flex justify-between items-center p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-semibold text-slate-700 cursor-pointer"
+                          className="w-full flex justify-between items-center gap-2 p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-semibold text-slate-700 cursor-pointer text-left"
                         >
-                          <span className="flex items-center gap-1.5">
-                            <Car className="w-4 h-4 text-teal-600" />
-                            자가용 및 무료 공영 주차장 안내
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <Car className="w-4 h-4 text-teal-600 shrink-0" />
+                            <span className="break-keep">자가용 및 무료 공영 주차장 안내</span>
                           </span>
-                          {isParkingExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {isParkingExpanded ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
                         </button>
                         
                         <AnimatePresence>
@@ -1700,52 +1735,106 @@ export default function App() {
           </div>
           )}
 
-          {/* TO-BE: Dual Naver Floating Action Buttons (Inquiry & Reservation) */}
-          {!showLiveAsIs && !asIsStates.floating && (
-            <div className="absolute right-3 sm:right-6 bottom-[7.5rem] sm:bottom-28 md:bottom-24 z-45 flex flex-col gap-2.5 sm:gap-3 items-end pointer-events-auto">
-              {/* Naver Inquiry Button */}
-              <div className="group flex items-center gap-2">
-                <span className="hidden sm:inline bg-slate-900/90 backdrop-blur-sm text-white text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-x-1 whitespace-nowrap">
-                  네이버 1:1 상담/문의
-                </span>
-                <button
-                  onClick={() => alert('네이버 톡톡 1:1 문의 연동이 호출되었습니다! (실제 운영시 네이버 톡톡 주소로 리다이렉트 처리됩니다.)')}
-                  className="w-11 h-11 sm:w-12 sm:h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-white/20 hover:bg-emerald-500 cursor-pointer"
-                  title="네이버 톡톡 문의"
-                >
-                  <MessageSquare className="w-5 h-5 text-white" />
-                </button>
-              </div>
+          {/* TO-BE: 우측 FAB — 히어로를 지난 뒤 표시 */}
+          <AnimatePresence>
+            {!showLiveAsIs && !asIsStates.floating && showSideFab && (
+              <motion.div
+                initial={{ opacity: 0, x: 24, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 24, scale: 0.9 }}
+                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute right-3 sm:right-6 z-45 flex flex-col gap-2.5 sm:gap-3 items-end pointer-events-auto"
+                style={{ bottom: floatBarHeight + 12 }}
+              >
+                <div className="group flex items-center gap-2">
+                  <span className="hidden sm:inline bg-slate-900/90 backdrop-blur-sm text-white text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap">
+                    네이버 1:1 상담/문의
+                  </span>
+                  <button
+                    onClick={() => alert('네이버 톡톡 1:1 문의 연동이 호출되었습니다! (실제 운영시 네이버 톡톡 주소로 리다이렉트 처리됩니다.)')}
+                    className="w-11 h-11 sm:w-12 sm:h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-white/20 hover:bg-emerald-500 cursor-pointer"
+                    title="네이버 톡톡 문의"
+                  >
+                    <MessageSquare className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+                <div className="group flex items-center gap-2">
+                  <span className="hidden sm:inline bg-slate-900/90 backdrop-blur-sm text-white text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap">
+                    네이버 간편 실시간 예약
+                  </span>
+                  <button
+                    onClick={() => setShowNaverModal(true)}
+                    className="w-11 h-11 sm:w-12 sm:h-12 bg-[#2DB400] text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-white/20 hover:bg-[#259b00] glow-teal cursor-pointer"
+                    title="네이버 실시간 예약"
+                  >
+                    <CalendarCheck className="w-5 h-5 text-white animate-bounce-subtle" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-              {/* Naver Reservation Button */}
-              <div className="group flex items-center gap-2">
-                <span className="hidden sm:inline bg-slate-900/90 backdrop-blur-sm text-white text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-x-1 whitespace-nowrap">
-                  네이버 간편 실시간 예약
-                </span>
-                <button
-                  onClick={() => setShowNaverModal(true)}
-                  className="w-11 h-11 sm:w-12 sm:h-12 bg-[#2DB400] text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-white/20 hover:bg-[#259b00] glow-teal cursor-pointer"
-                  title="네이버 실시간 예약"
-                >
-                  <CalendarCheck className="w-5 h-5 text-white animate-bounce-subtle" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Persistent Bottom Floating Reservation Bar — To-Be 전용 */}
+          {/* Persistent Bottom Floating Reservation Bar — To-Be 전용 (접기/열기) */}
           {!showLiveAsIs && (
           <div
             ref={(el) => {
               floatBarRef.current = el;
               (sectionRefs.form as React.MutableRefObject<HTMLDivElement | null>).current = el;
             }}
-            className={`absolute bottom-0 left-0 right-0 z-40 px-2.5 sm:px-4 md:px-6 py-3 sm:py-5 shadow-2xl animate-slide-up transition-all duration-300 flex items-center justify-center ${
+            className={`absolute bottom-0 left-0 right-0 z-40 shadow-2xl transition-all duration-300 ${
               asIsStates.form
                 ? 'bg-[#1a2332] border-t border-slate-700'
                 : 'bg-slate-950/95 backdrop-blur-md border-t border-teal-500/20'
             } ${highlightItem === 'form' ? 'ring-4 ring-yellow-400 ring-inset' : ''}`}
           >
+              {!floatBarOpen && !submitSuccess && (
+                <div className="px-3 py-2.5 flex items-center gap-2">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                    asIsStates.form ? 'bg-sky-500/20 text-sky-300' : 'bg-[#007680]/20 text-teal-400'
+                  }`}>
+                    <Headset className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-bold text-white truncate">실시간 퀵 상담 신청</p>
+                    <a href="tel:031-360-2879" className="text-xs font-semibold text-teal-300">
+                      031-360-2879
+                    </a>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFloatBarOpen(true)}
+                    className={`shrink-0 px-3 py-2 text-[11px] font-bold rounded-lg cursor-pointer border-0 ${
+                      asIsStates.form
+                        ? 'bg-[#7CFC00] text-black'
+                        : 'bg-[#007680] text-white'
+                    }`}
+                  >
+                    상담 열기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFloatBarOpen(true)}
+                    className="shrink-0 w-9 h-9 rounded-lg bg-white/10 text-white flex items-center justify-center cursor-pointer border-0"
+                    aria-label="퀵 상담 바 펼치기"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {(floatBarOpen || submitSuccess) && (
+              <div className="px-2.5 sm:px-4 md:px-6 py-3 sm:py-5 flex flex-col items-center justify-center">
+                {!submitSuccess && (
+                  <div className="w-full max-w-6xl flex justify-end mb-2 md:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setFloatBarOpen(false)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-slate-300 hover:text-white hover:bg-white/10 cursor-pointer border-0 bg-transparent"
+                    >
+                      접기 <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               {submitSuccess ? (
                 <div className="flex items-center justify-center w-full max-w-4xl gap-4">
                   <div className="flex items-center gap-3">
@@ -1906,6 +1995,8 @@ export default function App() {
                     </div>
                   </form>
                 </div>
+              )}
+              </div>
               )}
           </div>
           )}

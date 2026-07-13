@@ -113,7 +113,7 @@ export default function ProposalPanel({
         )}
         {!showLiveAsIs && isAllToBe && (
           <p className="mt-2 text-[10px] text-teal-300/90 leading-relaxed">
-            현재는 데모 페이지이며 디자인 및 내용 수정은 더 자세하게 작업합니다.
+            PC로 보실 것을 권장드립니다. 현재는 데모 페이지이며 디자인 및 내용 수정은 더 자세하게 작업합니다.
           </p>
         )}
       </div>
