@@ -1,0 +1,6 @@
+{
+  "name": "약속드림치과 제안 데모",
+  "description": "약속드림치과의 웹사이트 보안 강화 및 UI/UX 리뉴얼 제안서 내용을 한눈에 체감할 수 있는 인터랙티브 비포/애프터 비교 시뮬레이션 데모 페이지",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
