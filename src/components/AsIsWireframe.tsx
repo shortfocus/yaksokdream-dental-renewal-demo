@@ -1,4 +1,5 @@
-import { AlertTriangle, ExternalLink, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, ExternalLink, Sparkles, X, ZoomIn } from 'lucide-react';
 import { PROPOSAL_ITEMS } from '../data';
 import { ProposalKey } from '../types';
 
@@ -8,115 +9,85 @@ interface AsIsWireframeProps {
   onGoToBe: () => void;
 }
 
-/** 스케치 위 번호 핀 위치 */
-const PIN_POS: Record<ProposalKey, string> = {
-  security: 'top-[11%] right-[18%]',
-  banner: 'top-[36%] left-[22%]',
-  floating: 'top-[32%] right-[7%]',
-  hours: 'top-[68%] left-[28%]',
-  form: 'bottom-[9%] right-[22%]',
-};
+const ASIS_SCREENSHOT = '/asis/current-site.jpg';
 
 export default function AsIsWireframe({
   liveSiteUrl,
   onFocusItem,
   onGoToBe,
 }: AsIsWireframeProps) {
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsLightboxOpen(false);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isLightboxOpen]);
+
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-[#e8e6e1] overflow-hidden">
-      <div className="shrink-0 px-4 py-3 bg-[#d4d1ca] border-b border-[#bdb8ae] flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+      <div className="shrink-0 px-3 sm:px-4 py-2.5 sm:py-3 bg-[#d4d1ca] border-b border-[#bdb8ae] flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-[11px] sm:text-xs font-semibold text-slate-700 min-w-0">
           <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-          <span>As-Is 와이어프레임 · 기존 문제점만 요약</span>
+          <span className="truncate">As-Is · 기존 사이트 화면 (문제점 요약)</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <a
             href={liveSiteUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-white/80 text-slate-700 border border-slate-300 hover:bg-white transition-colors"
+            className="inline-flex flex-1 sm:flex-none items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-white/80 text-slate-700 border border-slate-300 hover:bg-white transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            실제 사이트 새 탭
+            실제 사이트
           </a>
           <button
             type="button"
             onClick={onGoToBe}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold bg-[#007680] text-white hover:bg-[#006069] transition-colors shadow-sm animate-pulse"
+            className="inline-flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold bg-[#007680] text-white hover:bg-[#006069] transition-colors shadow-sm animate-pulse"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            To-Be 개선안 보기
+            To-Be 보기
           </button>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-5xl mx-auto p-4 md:p-6 grid lg:grid-cols-[1.15fr_0.85fr] gap-5 items-start">
-          {/* Rough page sketch */}
-          <div className="relative rounded-sm border-2 border-dashed border-slate-400 bg-[#f4f3ef] shadow-inner overflow-hidden min-h-[420px]">
-            <div className="h-7 border-b border-dashed border-slate-300 flex items-center gap-1.5 px-3 bg-slate-200/70">
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
-              <div className="ml-2 flex-1 h-3 rounded-sm bg-slate-300/90 border border-dashed border-slate-400" />
-            </div>
-
-            <div className="h-11 border-b border-dashed border-slate-300 px-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded border border-dashed border-slate-400 bg-slate-200" />
-                <div className="space-y-1">
-                  <div className="h-2 w-20 bg-slate-300 rounded-sm" />
-                  <div className="h-1.5 w-12 bg-slate-200 rounded-sm" />
-                </div>
-              </div>
-              <div className="h-4 w-24 border border-dashed border-red-400 bg-red-50 rounded-sm" />
-            </div>
-
-            <div className="relative h-36 md:h-44 border-b border-dashed border-slate-300 bg-slate-200/40 px-5 py-6">
-              <div className="space-y-2 w-[50%]">
-                <div className="h-2.5 w-full bg-slate-400/60 rounded-sm" />
-                <div className="h-2 w-4/5 bg-slate-300 rounded-sm" />
-                <div className="h-2 w-3/5 bg-slate-300/80 rounded-sm" />
-              </div>
-              <div className="absolute top-3 right-3 w-14 h-32 border-2 border-dashed border-amber-500 bg-amber-100/80 rounded-sm" />
-            </div>
-
-            <div className="p-4 space-y-3 border-b border-dashed border-slate-300">
-              <div className="grid grid-cols-3 gap-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-12 border border-dashed border-slate-300 bg-slate-100 rounded-sm" />
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                <div className="h-1.5 w-full bg-slate-300 rounded-sm" />
-                <div className="h-1.5 w-[90%] bg-slate-300/80 rounded-sm" />
-                <div className="h-1.5 w-[78%] bg-slate-300/60 rounded-sm" />
-              </div>
-            </div>
-
-            <div className="p-3 bg-slate-300/35">
-              <div className="flex gap-2">
-                <div className="h-6 flex-1 border border-dashed border-slate-400 bg-white/60 rounded-sm" />
-                <div className="h-6 flex-1 border border-dashed border-slate-400 bg-white/60 rounded-sm" />
-                <div className="h-6 w-20 border-2 border-dashed border-red-500 bg-red-100 rounded-sm" />
-              </div>
-            </div>
-
-            {PROPOSAL_ITEMS.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onFocusItem(item.id)}
-                className={`absolute z-10 w-6 h-6 rounded-full bg-red-600 text-white text-[11px] font-bold shadow-md border-2 border-white hover:scale-110 transition-transform cursor-pointer ${PIN_POS[item.id]}`}
-                title={item.title}
-              >
-                {index + 1}
-              </button>
-            ))}
+        <div className="max-w-5xl mx-auto p-3 sm:p-4 md:p-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)] gap-4 sm:gap-5 items-start">
+          {/* Existing site screenshot — 전체 길이 표시, 클릭 시 상세 */}
+          <div className="rounded-sm border border-slate-300 bg-white shadow-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsLightboxOpen(true)}
+              className="group relative block w-full text-left cursor-zoom-in bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#007680] focus-visible:ring-inset"
+              aria-label="기존 사이트 화면 크게 보기"
+            >
+              <img
+                src={ASIS_SCREENSHOT}
+                alt="약속드림치과 기존 사이트 전체 화면"
+                className="block w-full h-auto select-none"
+                draggable={false}
+              />
+              <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 py-2.5 bg-slate-950/55 text-white text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                <ZoomIn className="w-3.5 h-3.5" />
+                클릭하면 전체 화면으로 자세히 봅니다
+              </span>
+            </button>
+            <p className="px-3 py-2 text-[10px] text-slate-500 bg-[#f4f3ef] border-t border-dashed border-slate-300">
+              기존 사이트 전체 캡처 · 이미지를 클릭하면 스크롤하며 상세 확인할 수 있습니다.
+            </p>
           </div>
 
           {/* Problem list */}
-          <div className="space-y-3">
+          <div className="space-y-3 lg:sticky lg:top-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                 Current Issues
@@ -125,7 +96,7 @@ export default function AsIsWireframe({
                 기존 사이트에서 바로잡는 지점
               </h3>
               <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
-                실제 페이지를 그대로 옮기지 않고, 전환·신뢰에 영향을 주는 문제만 와이어로 표시했습니다.
+                긴 페이지 구조는 그대로 두고, 보안·가독성·전환에 영향을 주는 문제만 요약했습니다.
               </p>
             </div>
 
@@ -166,6 +137,44 @@ export default function AsIsWireframe({
           </div>
         </div>
       </div>
+
+      {isLightboxOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm flex flex-col"
+          role="dialog"
+          aria-modal="true"
+          aria-label="기존 사이트 화면 상세 보기"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10">
+            <p className="text-sm font-semibold text-white">
+              기존 사이트 전체 화면
+              <span className="ml-2 text-[11px] font-normal text-slate-400">
+                Esc 또는 바깥 클릭으로 닫기
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsLightboxOpen(false)}
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors cursor-pointer"
+              aria-label="닫기"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={ASIS_SCREENSHOT}
+              alt="약속드림치과 기존 사이트 전체 화면 상세"
+              className="block w-full max-w-4xl mx-auto h-auto rounded-sm shadow-2xl bg-white"
+              draggable={false}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

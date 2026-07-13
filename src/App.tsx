@@ -35,7 +35,9 @@ import {
   Percent,
   Moon,
   Megaphone,
-  Headset
+  Headset,
+  Menu,
+  Info
 } from 'lucide-react';
 
 import ProposalPanel from './components/ProposalPanel';
@@ -70,6 +72,8 @@ export default function App() {
 
   const [activeProposalItem, setActiveProposalItem] = useState<ProposalKey | null>(null);
   const [highlightItem, setHighlightItem] = useState<ProposalKey | null>(null);
+  const [showDemoNotice, setShowDemoNotice] = useState(false);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
   // Form states (To-Be / As-Is both write to here)
   const [formData, setFormData] = useState({ ...INITIAL_FORM });
@@ -91,14 +95,11 @@ export default function App() {
   // Address bar URL state
   const [isAddressBarLoading, setIsAddressBarLoading] = useState(false);
 
-  // 일괄 As-Is: 실제 운영 중인 기존 사이트를 iframe으로 표시 (첫 진입 기본값)
+  // 일괄 As-Is: 기존 사이트 캡처 + 문제점 요약 (HTTPS iframe 불가 → 와이어프레임으로 통일)
   const [showLiveAsIs, setShowLiveAsIs] = useState(true);
   const LIVE_ASIS_URL = 'http://www.xn--vb0b92m88dwvj85ez2p.com/';
-  // HTTPS 페이지에서는 HTTP iframe이 Mixed Content로 차단됨 (로컬 http에서는 정상)
-  const canEmbedLiveAsIs =
-    typeof window !== 'undefined' &&
-    (LIVE_ASIS_URL.startsWith('https:') || window.location.protocol === 'http:');
-  const showLiveIframe = showLiveAsIs && canEmbedLiveAsIs;
+  // 로컬/배포 모두 동일한 As-Is 와이어프레임을 보여 대비를 맞춤
+  const showLiveIframe = false;
 
   // Refs for scroll target linking
   const sectionRefs = {
@@ -186,6 +187,7 @@ export default function App() {
         form: isAsIs,
       });
       setShowLiveAsIs(isAsIs);
+      setShowDemoNotice(!isAsIs);
       setIsAddressBarLoading(false);
     }, 400);
   };
@@ -250,9 +252,9 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-950 font-sans overflow-hidden">
+    <div className="flex h-[100dvh] bg-slate-950 font-sans overflow-hidden">
       
-      {/* 1. Left Companion Panel: Interactive Proposal Guide */}
+      {/* 1. Left Companion Panel: Interactive Proposal Guide (desktop) */}
       <div className="w-96 shrink-0 h-full hidden lg:block">
         <ProposalPanel 
           asIsStates={asIsStates}
@@ -264,34 +266,80 @@ export default function App() {
         />
       </div>
 
-      {/* 2. Main Center/Right Content Area: Interactive Browser Simulation */}
-      <div className="flex-1 flex flex-col h-full bg-slate-900">
-        
-        {/* Mobile/Tablet Header warning (since ProposalPanel is hidden on small screens) */}
-        <div className="lg:hidden p-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
-            <span className="text-xs text-white font-bold">약속드림치과 데모 모드</span>
+      {/* Mobile proposal drawer */}
+      {mobilePanelOpen && (
+        <div className="lg:hidden fixed inset-0 z-[80] flex">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/55 cursor-pointer border-0"
+            aria-label="제안서 패널 닫기"
+            onClick={() => setMobilePanelOpen(false)}
+          />
+          <div className="relative z-10 w-[min(100%,22rem)] h-full shadow-2xl animate-slide-up">
+            <ProposalPanel 
+              asIsStates={asIsStates}
+              toggleItemState={(id) => {
+                toggleItemState(id);
+              }}
+              onFocusItem={(id) => {
+                handleFocusItem(id);
+                setMobilePanelOpen(false);
+              }}
+              activeItem={activeProposalItem}
+              setAllToMode={(isAsIs) => {
+                setAllToMode(isAsIs);
+                setMobilePanelOpen(false);
+              }}
+              showLiveAsIs={showLiveAsIs}
+            />
+            <button
+              type="button"
+              onClick={() => setMobilePanelOpen(false)}
+              className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center border border-slate-700 cursor-pointer"
+              aria-label="닫기"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <div className="flex gap-1.5">
+        </div>
+      )}
+
+      {/* 2. Main Center/Right Content Area: Interactive Browser Simulation */}
+      <div className="flex-1 flex flex-col h-full min-w-0 bg-slate-900">
+        
+        {/* Mobile/Tablet Header */}
+        <div className="lg:hidden p-2.5 sm:p-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setMobilePanelOpen(true)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-bold border border-slate-700 cursor-pointer"
+          >
+            <Menu className="w-3.5 h-3.5" />
+            제안서
+          </button>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse shrink-0" />
+            <span className="text-[11px] text-white font-bold truncate">약속드림치과 데모</span>
+          </div>
+          <div className="flex gap-1 shrink-0">
             <button 
               onClick={() => setAllToMode(true)}
-              className={`px-2 py-1 text-[10px] font-bold rounded ${
+              className={`px-2 py-1 text-[10px] font-bold rounded border cursor-pointer ${
                 showLiveAsIs
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                  : 'bg-slate-800 text-slate-400'
+                  ? 'bg-red-500/20 text-red-400 border-red-500/30' 
+                  : 'bg-slate-800 text-slate-400 border-slate-700'
               }`}
             >
               As-Is
             </button>
             <button 
               onClick={() => setAllToMode(false)}
-              className={`px-2 py-1 text-[10px] font-bold rounded ${
+              className={`px-2 py-1 text-[10px] font-bold rounded border cursor-pointer ${
                 Object.values(asIsStates).every(v => v === false) && !showLiveAsIs
-                  ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' 
+                  ? 'bg-teal-500/20 text-teal-400 border-teal-500/30' 
                   : showLiveAsIs
-                    ? 'bg-teal-500/25 text-teal-300 border border-teal-400/50 animate-pulse'
-                    : 'bg-slate-800 text-slate-400'
+                    ? 'bg-teal-500/25 text-teal-300 border-teal-400/50 animate-pulse'
+                    : 'bg-slate-800 text-slate-400 border-slate-700'
               }`}
             >
               To-Be
@@ -299,21 +347,39 @@ export default function App() {
           </div>
         </div>
 
+        {/* To-Be demo notice */}
+        {showDemoNotice && !showLiveAsIs && (
+          <div className="shrink-0 z-50 px-3 py-2.5 bg-teal-950 border-b border-teal-500/30 flex items-start sm:items-center gap-2.5">
+            <Info className="w-4 h-4 text-teal-300 shrink-0 mt-0.5 sm:mt-0" />
+            <p className="flex-1 text-[11px] sm:text-xs text-teal-100 leading-relaxed font-medium">
+              현재는 데모 페이지이며 디자인 및 내용 수정은 더 자세하게 작업합니다.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDemoNotice(false)}
+              className="shrink-0 text-teal-300/80 hover:text-white cursor-pointer bg-transparent border-0 p-0.5"
+              aria-label="안내 닫기"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Browser Chrome Wrapper */}
-        <div className="flex-1 flex flex-col m-3 md:m-4 rounded-xl overflow-hidden border border-slate-800 bg-white shadow-2xl relative">
+        <div className="flex-1 flex flex-col m-1.5 sm:m-3 md:m-4 rounded-lg sm:rounded-xl overflow-hidden border border-slate-800 bg-white shadow-2xl relative min-h-0">
           
           {/* Simulated Browser Bar */}
-          <div className="bg-slate-100 border-b border-slate-200 px-4 py-3 shrink-0 flex items-center gap-3">
+          <div className="bg-slate-100 border-b border-slate-200 px-2 sm:px-4 py-2 sm:py-3 shrink-0 flex items-center gap-2 sm:gap-3">
             {/* Mac style red, yellow, green controls */}
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5 shrink-0">
               <span className="w-3 h-3 rounded-full bg-[#ff5f56]" />
               <span className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
               <span className="w-3 h-3 rounded-full bg-[#27c93f]" />
             </div>
 
             {/* Address Bar */}
-            <div className="flex-1 flex items-center gap-2 max-w-2xl mx-auto">
-              <div className={`w-full flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono border transition-all duration-300 ${
+            <div className="flex-1 flex items-center gap-2 max-w-2xl mx-auto min-w-0">
+              <div className={`w-full min-w-0 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-mono border transition-all duration-300 ${
                 asIsStates.security 
                   ? 'bg-red-50 border-red-200 text-red-800' 
                   : 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
@@ -322,9 +388,9 @@ export default function App() {
                 {isAddressBarLoading ? (
                   <RefreshCw className="w-3.5 h-3.5 text-slate-400 animate-spin shrink-0" />
                 ) : asIsStates.security ? (
-                  <div className="flex items-center gap-1.5 font-bold shrink-0 text-red-600 animate-pulse">
+                  <div className="flex items-center gap-1 font-bold shrink-0 text-red-600 animate-pulse">
                     <Unlock className="w-3.5 h-3.5" />
-                    <span>주의 요함 |</span>
+                    <span className="hidden xs:inline sm:inline">주의 요함 |</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 font-bold shrink-0 text-emerald-600">
@@ -349,16 +415,16 @@ export default function App() {
                   href={LIVE_ASIS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border transition-all duration-200 bg-slate-800 text-white border-slate-700 hover:bg-slate-700"
+                  className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold cursor-pointer border transition-all duration-200 bg-slate-800 text-white border-slate-700 hover:bg-slate-700"
                   title="새 탭에서 기존 사이트 열기"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>새 탭으로 열기</span>
+                  <span className="hidden sm:inline">새 탭으로 열기</span>
                 </a>
               ) : (
                 <button
                   onClick={() => toggleItemState('security')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold cursor-pointer border transition-all duration-200 ${
                     asIsStates.security 
                       ? 'bg-red-500 text-white border-red-600 hover:bg-red-600' 
                       : 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700'
@@ -368,12 +434,12 @@ export default function App() {
                   {asIsStates.security ? (
                     <>
                       <ShieldAlert className="w-3.5 h-3.5" />
-                      <span>SSL 미적용</span>
+                      <span className="hidden sm:inline">SSL 미적용</span>
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>SSL 보안 가동</span>
+                      <span className="hidden sm:inline">SSL 보안 가동</span>
                     </>
                   )}
                 </button>
@@ -1635,45 +1701,46 @@ export default function App() {
           )}
 
           {/* TO-BE: Dual Naver Floating Action Buttons (Inquiry & Reservation) */}
-          {!asIsStates.floating && (
-            <div className="absolute right-6 bottom-28 md:bottom-24 z-45 flex flex-col gap-3 items-end pointer-events-auto">
+          {!showLiveAsIs && !asIsStates.floating && (
+            <div className="absolute right-3 sm:right-6 bottom-[7.5rem] sm:bottom-28 md:bottom-24 z-45 flex flex-col gap-2.5 sm:gap-3 items-end pointer-events-auto">
               {/* Naver Inquiry Button */}
               <div className="group flex items-center gap-2">
-                <span className="bg-slate-900/90 backdrop-blur-sm text-white text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-x-1 whitespace-nowrap">
+                <span className="hidden sm:inline bg-slate-900/90 backdrop-blur-sm text-white text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-x-1 whitespace-nowrap">
                   네이버 1:1 상담/문의
                 </span>
                 <button
                   onClick={() => alert('네이버 톡톡 1:1 문의 연동이 호출되었습니다! (실제 운영시 네이버 톡톡 주소로 리다이렉트 처리됩니다.)')}
-                  className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-white/20 hover:bg-emerald-500 cursor-pointer"
+                  className="w-11 h-11 sm:w-12 sm:h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-white/20 hover:bg-emerald-500 cursor-pointer"
                   title="네이버 톡톡 문의"
                 >
-                  <MessageSquare className="w-5.5 h-5.5 text-white" />
+                  <MessageSquare className="w-5 h-5 text-white" />
                 </button>
               </div>
 
               {/* Naver Reservation Button */}
               <div className="group flex items-center gap-2">
-                <span className="bg-slate-900/90 backdrop-blur-sm text-white text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-x-1 whitespace-nowrap">
+                <span className="hidden sm:inline bg-slate-900/90 backdrop-blur-sm text-white text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-x-1 whitespace-nowrap">
                   네이버 간편 실시간 예약
                 </span>
                 <button
                   onClick={() => setShowNaverModal(true)}
-                  className="w-12 h-12 bg-[#2DB400] text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-white/20 hover:bg-[#259b00] glow-teal cursor-pointer"
+                  className="w-11 h-11 sm:w-12 sm:h-12 bg-[#2DB400] text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-white/20 hover:bg-[#259b00] glow-teal cursor-pointer"
                   title="네이버 실시간 예약"
                 >
-                  <CalendarCheck className="w-5.5 h-5.5 text-white animate-bounce-subtle" />
+                  <CalendarCheck className="w-5 h-5 text-white animate-bounce-subtle" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* Persistent Bottom Floating Reservation Bar */}
+          {/* Persistent Bottom Floating Reservation Bar — To-Be 전용 */}
+          {!showLiveAsIs && (
           <div
             ref={(el) => {
               floatBarRef.current = el;
               (sectionRefs.form as React.MutableRefObject<HTMLDivElement | null>).current = el;
             }}
-            className={`absolute bottom-0 left-0 right-0 z-40 px-4 md:px-6 py-5 shadow-2xl animate-slide-up transition-all duration-300 flex items-center justify-center ${
+            className={`absolute bottom-0 left-0 right-0 z-40 px-2.5 sm:px-4 md:px-6 py-3 sm:py-5 shadow-2xl animate-slide-up transition-all duration-300 flex items-center justify-center ${
               asIsStates.form
                 ? 'bg-[#1a2332] border-t border-slate-700'
                 : 'bg-slate-950/95 backdrop-blur-md border-t border-teal-500/20'
@@ -1697,25 +1764,25 @@ export default function App() {
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col lg:flex-row items-center justify-center gap-5 lg:gap-8 xl:gap-10 w-full max-w-6xl mx-auto">
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-center gap-3 sm:gap-5 lg:gap-8 xl:gap-10 w-full max-w-6xl mx-auto">
                   {/* Left: 퀵 상담 카피 + 전화번호 */}
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${
+                  <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                    <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 ${
                       asIsStates.form ? 'bg-sky-500/20 text-sky-300' : 'bg-[#007680]/20 text-teal-400 border border-teal-500/20'
                     }`}>
-                      <Headset className="w-5 h-5" />
+                      <Headset className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div className="text-left space-y-0.5">
-                      <h4 className="text-xs md:text-sm font-bold text-white flex items-center gap-1.5">
+                    <div className="text-left space-y-0.5 min-w-0">
+                      <h4 className="text-[11px] sm:text-xs md:text-sm font-bold text-white flex items-center gap-1.5">
                         실시간 1초 퀵 상담 예약 신청
                         {!asIsStates.form && (
                           <span className="hidden md:inline-flex bg-emerald-500/10 text-emerald-400 text-[9px] px-2 py-0.5 rounded border border-emerald-500/20">🔒 보안인증</span>
                         )}
                       </h4>
-                      <p className="text-[10px] text-slate-400">성함과 번호만 남기시면 전담실장이 직접 연락드립니다.</p>
+                      <p className="hidden sm:block text-[10px] text-slate-400">성함과 번호만 남기시면 전담실장이 직접 연락드립니다.</p>
                       <a
                         href="tel:031-360-2879"
-                        className="inline-block text-lg md:text-xl font-bold text-white tracking-tight hover:text-teal-300 transition-colors"
+                        className="inline-block text-base sm:text-lg md:text-xl font-bold text-white tracking-tight hover:text-teal-300 transition-colors"
                       >
                         031-360-2879
                       </a>
@@ -1731,7 +1798,7 @@ export default function App() {
                         }
                       : handleSubmitConsultation
                     }
-                    className="shrink-0 flex flex-col items-center gap-2"
+                    className="w-full lg:w-auto shrink-0 flex flex-col items-stretch sm:items-center gap-2"
                   >
                     {asIsStates.form && (
                       <p className="text-[10px] text-red-300 font-semibold flex items-center gap-1">
@@ -1740,13 +1807,13 @@ export default function App() {
                       </p>
                     )}
 
-                    <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2">
+                    <div className="flex flex-wrap items-center justify-start sm:justify-center gap-1.5 md:gap-2">
                       <input
                         type="text"
                         placeholder="성함"
                         value={formData.name}
                         onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        className={`w-[88px] md:w-28 px-2.5 py-2 text-xs text-white placeholder-slate-400 focus:outline-none ${
+                        className={`w-[calc(50%-0.25rem)] sm:w-[88px] md:w-28 px-2.5 py-2 text-xs text-white placeholder-slate-400 focus:outline-none ${
                           asIsStates.form
                             ? 'bg-transparent border border-white/40'
                             : 'bg-slate-900 border border-slate-700 rounded-lg focus:border-[#007680]'
@@ -1757,7 +1824,7 @@ export default function App() {
                         placeholder="010-1234-5678"
                         value={formData.phone}
                         onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        className={`w-[140px] md:w-40 px-2.5 py-2 text-xs text-white placeholder-slate-400 focus:outline-none ${
+                        className={`w-[calc(50%-0.25rem)] sm:w-[140px] md:w-40 px-2.5 py-2 text-xs text-white placeholder-slate-400 focus:outline-none ${
                           asIsStates.form
                             ? 'bg-transparent border border-white/40'
                             : 'bg-slate-900 border border-slate-700 rounded-lg focus:border-[#007680]'
@@ -1766,7 +1833,7 @@ export default function App() {
                       <select
                         value={formData.treatment}
                         onChange={(e) => setFormData(prev => ({ ...prev, treatment: e.target.value }))}
-                        className={`min-w-[96px] w-28 px-2 py-2 text-xs text-white focus:outline-none ${
+                        className={`w-[calc(50%-0.25rem)] sm:min-w-[96px] sm:w-28 px-2 py-2 text-xs text-white focus:outline-none ${
                           asIsStates.form
                             ? 'bg-transparent border border-white/40'
                             : 'bg-slate-900 border border-slate-700 rounded-lg focus:border-[#007680]'
@@ -1779,7 +1846,7 @@ export default function App() {
                       <select
                         value={formData.preferredTime}
                         onChange={(e) => setFormData(prev => ({ ...prev, preferredTime: e.target.value }))}
-                        className={`min-w-[120px] w-36 px-2 py-2 text-xs text-white focus:outline-none ${
+                        className={`w-[calc(50%-0.25rem)] sm:min-w-[120px] sm:w-36 px-2 py-2 text-xs text-white focus:outline-none ${
                           asIsStates.form
                             ? 'bg-transparent border border-white/40'
                             : 'bg-slate-900 border border-slate-700 rounded-lg focus:border-[#007680]'
@@ -1790,7 +1857,7 @@ export default function App() {
                         ))}
                       </select>
 
-                      <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-white/90 select-none shrink-0 ml-1">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-white/90 select-none shrink-0">
                         <input
                           type="checkbox"
                           checked={formData.agreePrivacy}
@@ -1812,7 +1879,7 @@ export default function App() {
                       <button
                         type="submit"
                         disabled={!asIsStates.form && isSubmitting}
-                        className={`shrink-0 px-4 py-2 text-xs font-bold transition-all relative whitespace-nowrap ${
+                        className={`w-full sm:w-auto shrink-0 px-4 py-2.5 sm:py-2 text-xs font-bold transition-all relative whitespace-nowrap ${
                           asIsStates.form
                             ? 'bg-[#7CFC00] text-black cursor-not-allowed opacity-90'
                             : 'bg-[#007680] hover:bg-[#0098a6] text-white rounded-lg cursor-pointer shadow-md shadow-[#007680]/20 disabled:bg-slate-800'
@@ -1841,6 +1908,7 @@ export default function App() {
                 </div>
               )}
           </div>
+          )}
 
         </div>
       </div>

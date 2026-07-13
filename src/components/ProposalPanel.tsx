@@ -111,6 +111,11 @@ export default function ProposalPanel({
             <span className="text-teal-400 font-semibold">To-Be를 눌러 개선안을 확인해 보세요.</span>
           </p>
         )}
+        {!showLiveAsIs && isAllToBe && (
+          <p className="mt-2 text-[10px] text-teal-300/90 leading-relaxed">
+            현재는 데모 페이지이며 디자인 및 내용 수정은 더 자세하게 작업합니다.
+          </p>
+        )}
       </div>
 
       {/* Interactive Item List */}
